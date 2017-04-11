@@ -1,0 +1,11 @@
+(library
+ ((name        blockexplorer)
+  (public_name blockexplorer)
+  (modules (blockexplorer))
+  (libraries (ptime ezjsonm ocplib-json-typed))))
+
+(library
+ ((name        blockexplorer_async)
+  (public_name blockexplorer.async)
+  (modules (blockexplorer_async))
+  (libraries (hex ocplib-json-typed ezjsonm blockexplorer cohttp.async))))
