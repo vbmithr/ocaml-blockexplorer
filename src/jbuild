@@ -9,3 +9,14 @@
   (public_name blockexplorer.async)
   (modules (blockexplorer_async))
   (libraries (hex ocplib-json-typed ezjsonm blockexplorer cohttp.async))))
+
+(executable
+ ((name bx)
+  (public_name bx)
+  (modules (bx))
+  ;; (preprocess (pps (ppx_sexp_conv)))
+  (libraries (blockexplorer.async))))
+
+(install
+ ((section bin)
+  (files (bx.exe))))
