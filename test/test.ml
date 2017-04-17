@@ -14,6 +14,11 @@ let txs = [
 let print_unknown ppf _ = Format.fprintf ppf "unknown error"
 
 let main () =
+  begin
+    BA.tx_by_addr ~testnet:true "mtaGjUwusMAyx451M26KAJq6a8BiEJyMUd" >>| function
+    | Ok _ -> ()
+    | Error err -> error "%s" (BA.Http.string_of_error err)
+  end >>= fun () ->
   BA.utxos ~testnet:true ["mtaGjUwusMAyx451M26KAJq6a8BiEJyMUd"] >>= function
   | Ok res ->
       List.iter txs ~f:begin fun t ->

@@ -28,3 +28,6 @@ val utxos :
 
 val broadcast_tx :
   ?testnet:bool -> Hex.t -> Hex.t Http.result
+
+val tx_by_addr :
+  ?testnet:bool -> string -> Tx.t list Http.result

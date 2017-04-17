@@ -58,6 +58,7 @@ let safe_get ?headers ~encoding url =
     | Client str -> Http.Client str
     | Server str -> Server str
     | API str -> API str
+    | Data_encoding json -> Data_encoding json
     | exn -> Cohttp exn
   end
 
@@ -106,3 +107,13 @@ let broadcast_tx ?(testnet=false) (`Hex rawtx_hex) =
   let params = ["rawtx", [rawtx_hex]] in
   let encoding = Json_encoding.(obj1 (req "txid" string)) in
   safe_post ~params ~encoding url >>| Result.map ~f:(fun txid -> `Hex txid)
+
+let tx_by_addr ?(testnet=false) addr =
+  let url = if testnet then testnet_base_url else base_url in
+  let url = Uri.with_path url "/api/txs" in
+  let url = Uri.with_query url ["address", [addr]] in
+  let encoding =
+    let open Json_encoding in
+    conv (fun s -> (0, s)) (fun (_, s) -> s)
+      (obj2 (req "pagesTotal" int) (req "txs" (list Tx.encoding))) in
+  safe_get ~encoding url
