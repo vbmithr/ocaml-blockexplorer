@@ -95,11 +95,13 @@ let rawtx ?(testnet=false) (`Hex txid) =
   let encoding = Json_encoding.(obj1 (req "rawtx" string)) in
   safe_get ~encoding url >>| Result.map ~f:(fun txid -> `Hex txid)
 
-let utxos ?(testnet=false) addrs =
-  let url = if testnet then testnet_base_url else base_url in
-  let url = Uri.with_path url "/api/addrs/utxo" in
-  let params = ["addrs", addrs] in
-  safe_post ~params ~encoding:Json_encoding.(list Utxo.encoding) url
+let utxos ?(testnet=false) = function
+  | [] -> Deferred.return (Ok [])
+  | addrs ->
+      let url = if testnet then testnet_base_url else base_url in
+      let url = Uri.with_path url "/api/addrs/utxo" in
+      let params = ["addrs", addrs] in
+      safe_post ~params ~encoding:Json_encoding.(list Utxo.encoding) url
 
 let broadcast_tx ?(testnet=false) (`Hex rawtx_hex) =
   let url = if testnet then testnet_base_url else base_url in
