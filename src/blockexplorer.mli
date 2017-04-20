@@ -79,19 +79,24 @@ module Tx : sig
 end
 
 module Utxo : sig
+  type confirmed =
+    | Unconfirmed of Ptime.t
+    | Confirmed of {
+        confirmations : int ;
+        vout : int ;
+        scriptPubKey : string ;
+        height: int ;
+      }
+
   type t = {
     address : string ;
     txid : string ;
-    vout : int ;
-    ts : Ptime.t ;
-    scriptPubKey : string ;
     amount : int ; (* in sats *)
-    height: int ;
-    confirmations : int ;
+    confirmed: confirmed ;
   }
 
   val encoding : t Json_encoding.encoding
-  val to_json : t -> Json_repr.ezjsonm
-  val to_string : t -> string
+
   val pp : Format.formatter -> t -> unit
+  val to_string : t -> string
 end

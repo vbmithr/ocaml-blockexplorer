@@ -210,47 +210,66 @@ module Tx = struct
 end
 
 module Utxo = struct
+  type confirmed =
+    | Unconfirmed of Ptime.t
+    | Confirmed of {
+        confirmations : int ;
+        vout : int ;
+        scriptPubKey : string ;
+        height: int ;
+      }
+
+  let pp_confirmed ppf = function
+    | Unconfirmed ts ->
+      Format.fprintf ppf "Unconfirmed %a" Ptime.pp ts
+    | Confirmed { confirmations ; vout ; scriptPubKey ; height } ->
+      Format.fprintf ppf
+        "Confirmed {@[<hov 1> confirmations = %d ;@;vout = %d;@;scriptPubKey = %s ;@;height = %d }@]"
+        confirmations vout scriptPubKey height
+
   type t = {
     address : string ;
     txid : string ;
-    vout : int ;
-    ts : Ptime.t ;
-    scriptPubKey : string ;
     amount : int ; (* in sats *)
-    height: int ;
-    confirmations : int ;
+    confirmed: confirmed ;
   }
+
+  let pp ppf { address ; txid ; amount ; confirmed } =
+    Format.fprintf ppf
+      "{@[<hov 1> address = %s ;@;txid = %s ;@;amount = %d ;@;confirmed = %a }@]"
+      address txid amount pp_confirmed confirmed
 
   let encoding =
     let open Json_encoding in
     conv
-      (fun { address ; txid ; vout ; ts ; scriptPubKey ; amount ; height ; confirmations } ->
-         let ts = Ptime.to_float_s ts in
+      (fun { address ; txid ; amount ; confirmed } ->
          let sats = float_of_int amount in
          let amount = sats /. 1e8 in
-         ( address, txid, vout, ts, scriptPubKey, amount, sats, height, confirmations, None))
+         ( address, txid, None, 0., None, amount, sats, None, 0, None))
       (fun (address, txid, vout, ts, scriptPubKey, _amount, sats, height, confirmations, _) ->
-         let ts = Base.Option.value_exn (Ptime.of_float_s ts) in
+         let ts = match Ptime.of_float_s ts with
+           | None -> invalid_arg "Ptime.of_float_s"
+           | Some ts -> ts in
          let amount = int_of_float sats in
-         { address ; txid ; vout ; ts ; scriptPubKey ; amount ; height ; confirmations })
+         let vout, scriptPubKey, height = match vout, scriptPubKey, height with
+           | Some v, Some s, Some h -> v, s, h
+           | _ -> failwith "Utxo.encoding" in
+         let confirmed = match confirmations with
+         | 0 -> Unconfirmed ts
+         | n -> Confirmed { confirmations ; vout ; scriptPubKey ; height } in
+         { address ; txid ; amount ; confirmed })
       (obj10
          (req "address" string)
          (req "txid" string)
-         (req "vout" int)
+         (opt "vout" int)
          (dft "ts" float 0.)
-         (req "scriptPubKey" string)
+         (opt "scriptPubKey" string)
          (req "amount" float)
          (req "satoshis" float)
-         (req "height" int)
+         (opt "height" int)
          (req "confirmations" int)
          (opt "confirmationsFromCache" bool))
 
-  let to_json t =
-    Json_encoding.construct encoding t
-
   let to_string t =
-    Ezjsonm.(to_string (wrap (to_json t)))
-
-  let pp ppf t =
-    Format.fprintf ppf "%s" (to_string t)
+    Format.asprintf "%a" pp t
 end
