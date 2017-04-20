@@ -1,0 +1,16 @@
+(library
+ ((name        blockexplorer_async)
+  (public_name blockexplorer.async)
+  (modules (blockexplorer_async))
+  (optional)
+  (libraries (hex ocplib-json-typed ezjsonm blockexplorer cohttp.async))))
+
+(executable
+ ((name bx)
+  (public_name bx)
+  (modules (bx))
+  (libraries (blockexplorer.async))))
+
+(install
+ ((section bin)
+  (files (bx.exe))))
