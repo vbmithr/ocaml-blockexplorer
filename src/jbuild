@@ -1,5 +1,5 @@
 (library
  ((name        blockexplorer)
   (public_name blockexplorer)
-  (modules (blockexplorer))
+  (modules (types http))
   (libraries (base ptime ezjsonm ocplib-json-typed))))

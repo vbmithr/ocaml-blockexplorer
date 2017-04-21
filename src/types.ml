@@ -251,12 +251,13 @@ module Utxo = struct
            | None -> invalid_arg "Ptime.of_float_s"
            | Some ts -> ts in
          let amount = int_of_float sats in
-         let vout, scriptPubKey, height = match vout, scriptPubKey, height with
-           | Some v, Some s, Some h -> v, s, h
-           | _ -> failwith "Utxo.encoding" in
          let confirmed = match confirmations with
          | 0 -> Unconfirmed ts
-         | n -> Confirmed { confirmations ; vout ; scriptPubKey ; height } in
+         | n ->
+           let vout, scriptPubKey, height = match vout, scriptPubKey, height with
+             | Some v, Some s, Some h -> v, s, h
+             | _ -> failwith "Utxo.encoding" in
+           Confirmed { confirmations ; vout ; scriptPubKey ; height } in
          { address ; txid ; amount ; confirmed })
       (obj10
          (req "address" string)

@@ -3,6 +3,7 @@ open Async
 open Log.Global
 
 open Blockexplorer
+open Blockexplorer.Types
 open Blockexplorer_async
 
 let loglevel_of_int = function 2 -> `Info | 3 -> `Debug | _ -> `Error
@@ -15,9 +16,9 @@ let fetch_utxos loglevel testnet addrs () =
     error "%s" (Http.string_of_error err) ;
     Shutdown.exit 1
   | Ok utxos ->
-    let _ret = List.iter2 addrs utxos ~f:begin fun a u ->
+    List.iter utxos ~f:begin fun u ->
         printf "%s" (Utxo.to_string u)
-      end in
+    end ;
     Shutdown.exit 0
 
 let fetch_utxos =

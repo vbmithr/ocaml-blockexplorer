@@ -3,43 +3,12 @@ open Async
 open Cohttp_async
 
 open Blockexplorer
+open Blockexplorer.Types
 
 exception Client of string
 exception Server of string
 exception API of string
 exception Data_encoding of Ezjsonm.t
-
-module Http = struct
-  type error =
-    | Cohttp of exn
-    | Client of string
-    | Server of string
-    | API of string
-    | Data_encoding of Ezjsonm.t
-
-  let api_str msg = API msg
-  let api k =
-    Format.kasprintf (fun msg -> API msg) k
-
-  let api_fail msg = Result.fail (API msg)
-
-  let api_failf k =
-    Format.kasprintf (fun msg -> Result.fail (API msg)) k
-
-  let data_encoding json = Result.fail (Data_encoding json)
-
-  let string_of_error = function
-    | Cohttp exn -> Exn.to_string exn
-    | Client msg -> "HTTP Client error: " ^ msg
-    | Server msg -> "HTTP Server error: " ^ msg
-    | API msg -> "API error: " ^ msg
-    | Data_encoding json -> "Data encoding error: " ^ (Ezjsonm.to_string json)
-
-  let pp_error ppf t =
-    Format.fprintf ppf "%s" (string_of_error t)
-
-  type 'a result = ('a, error) Result.t Deferred.t
-end
 
 let safe_get ?headers ~encoding url =
   Monitor.try_with ~extract_exn:true begin fun () ->

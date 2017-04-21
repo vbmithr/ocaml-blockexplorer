@@ -1,9 +1,7 @@
-open Core
-open Async
-open Log.Global
-
+open Lwt.Infix
 open Blockexplorer
-module BA = Blockexplorer_async
+open Blockexplorer.Types
+open Blockexplorer_lwt
 
 let txs = [
   {|{"txid":"5756ff16e2b9f881cd15b8a7e478b4899965f87f553b6210d0f8e5bf5be7df1d","version":1,"locktime":981825022,"vin":[{"coinbase":"03a6ab05e4b883e5bda9e7a59ee4bb99e9b1bc76a3a2bb0e9c92f06e4a6349de9ccc8fbe0fad11133ed73c78ee12876334c13c02000000f09f909f2f4249503130302f4d696e65642062792073647a686162636400000000000000000000000000000000","sequence":2765846367,"n":0}],"vout":[{"value":"25.37726812","n":0,"scriptPubKey":{"hex":"76a914c825a1ecf2a6830c4401620c3a16f1995057c2ab88ac","asm":"OP_DUP OP_HASH160 c825a1ecf2a6830c4401620c3a16f1995057c2ab OP_EQUALVERIFY OP_CHECKSIG","addresses":["1KFHE7w8BhaENAswwryaoccDb6qcT6DbYY"],"type":"pubkeyhash"},"spentTxId":"a01b32246795ca47ed77ef78d56736677ec2f2aae7b400ebbcc95cd784492dc2","spentIndex":6,"spentHeight":371831}],"blockhash":"0000000000000000027d0985fef71cbc05a5ee5cdbdc4c6baf2307e6c5db8591","blockheight":371622,"confirmations":89812,"time":1440604784,"blocktime":1440604784,"isCoinBase":true,"valueOut":25.37726812,"size":185}|} ;
@@ -15,33 +13,26 @@ let print_unknown ppf _ = Format.fprintf ppf "unknown error"
 
 let main () =
   begin
-    BA.tx_by_addr ~testnet:true "mtaGjUwusMAyx451M26KAJq6a8BiEJyMUd" >>| function
-    | Ok _ -> ()
-    | Error err -> error "%s" (BA.Http.string_of_error err)
+    tx_by_addr ~testnet:true "mtaGjUwusMAyx451M26KAJq6a8BiEJyMUd" >>= function
+    | Ok _ -> Lwt.return_unit
+    | Error err -> Lwt_log.error (Http.string_of_error err)
   end >>= fun () ->
-  BA.utxos ~testnet:true ["mtaGjUwusMAyx451M26KAJq6a8BiEJyMUd"] >>= function
+  utxos ~testnet:true ["mtaGjUwusMAyx451M26KAJq6a8BiEJyMUd"] >|= function
   | Ok res ->
-      List.iter txs ~f:begin fun t ->
+      ListLabels.iter txs ~f:begin fun t ->
         let json = Ezjsonm.from_string t in
         try
           ignore @@ Json_encoding.destruct Tx.encoding json
         with exn -> begin
-            error "%s"
+            Lwt_log.ign_error
               (Format.asprintf "%a"
                  (Json_encoding.print_error ~print_unknown) exn) ;
           end
       end ;
-      List.iter res ~f:begin fun utxo ->
-        info "%s" (Utxo.to_string utxo)
-      end ;
-      Scheduler.yield_until_no_jobs_remain () >>= fun () ->
-      Shutdown.exit 0
+      ListLabels.iter res ~f:begin fun utxo ->
+        Lwt_log.ign_notice (Utxo.to_string utxo)
+      end
   | Error err ->
-      error "%s" (BA.Http.string_of_error err) ;
-      Scheduler.yield_until_no_jobs_remain () >>= fun () ->
-      Shutdown.exit 1
+    Lwt_log.ign_error (Http.string_of_error err)
 
-let () =
-  set_level `Debug ;
-  don't_wait_for @@ main () ;
-  never_returns @@ Scheduler.go ()
+let () = Lwt_main.run (main ())

@@ -7,10 +7,6 @@
 
 (executable
  ((name bx)
-  (public_name bx)
+  ;; (public_name bx_async)
   (modules (bx))
   (libraries (blockexplorer.async))))
-
-(install
- ((section bin)
-  (files (bx.exe))))
