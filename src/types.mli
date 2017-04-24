@@ -13,7 +13,7 @@ module Tx : sig
       | Pubkeyhash
 
     type t = {
-      addresses : string list ;
+      addresses : Base58.t list ;
       asm : string list ;
       hex : string ;
       typ : typ ;
@@ -29,7 +29,7 @@ module Tx : sig
           txid : string ;
           value: int ;
           doubleSpentTxID: string option ;
-          addr : string ;
+          addr : Base58.t ;
           scriptSig : ScriptSig.t ;
           vout : int ;
         }
@@ -89,7 +89,7 @@ module Utxo : sig
       }
 
   type t = {
-    address : string ;
+    address : Base58.t ;
     txid : string ;
     amount : int ; (* in sats *)
     confirmed: confirmed ;

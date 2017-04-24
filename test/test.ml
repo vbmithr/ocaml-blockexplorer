@@ -13,11 +13,11 @@ let print_unknown ppf _ = Format.fprintf ppf "unknown error"
 
 let main () =
   begin
-    tx_by_addr ~testnet:true "mtaGjUwusMAyx451M26KAJq6a8BiEJyMUd" >>= function
+    tx_by_addr ~testnet:true (`Base58 "mtaGjUwusMAyx451M26KAJq6a8BiEJyMUd") >>= function
     | Ok _ -> Lwt.return_unit
     | Error err -> Lwt_log.error (Http.string_of_error err)
   end >>= fun () ->
-  utxos ~testnet:true ["mtaGjUwusMAyx451M26KAJq6a8BiEJyMUd"] >|= function
+  utxos ~testnet:true [(`Base58 "mtaGjUwusMAyx451M26KAJq6a8BiEJyMUd")] >|= function
   | Ok res ->
       ListLabels.iter txs ~f:begin fun t ->
         let json = Ezjsonm.from_string t in

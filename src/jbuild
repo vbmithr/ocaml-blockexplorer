@@ -2,4 +2,4 @@
  ((name        blockexplorer)
   (public_name blockexplorer)
   (modules (types http))
-  (libraries (base ptime ezjsonm ocplib-json-typed))))
+  (libraries (base base58 ptime ezjsonm ocplib-json-typed))))
