@@ -29,10 +29,10 @@ let testnet =
 let fetch_utxos =
   let payment_addr =
     (fun str ->
-       match Base58.of_string str with
+       match Base58.Bitcoin.of_string str with
        | Some addr -> `Ok addr
-       | None -> `Error (Printf.sprintf "Payment address expected, got %s" str)),
-    Base58.pp in
+       | None -> `Error (Printf.sprintf "Bitcoin multisig address expected, got %s" str)),
+    Base58.Bitcoin.pp in
   let addrs =
     Arg.(non_empty & (pos_all payment_addr []) & info [] ~docv:"ADDR") in
   Term.(const fetch_utxos $ loglevel $ testnet $ addrs),

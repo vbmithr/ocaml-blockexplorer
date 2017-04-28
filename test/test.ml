@@ -12,12 +12,13 @@ let txs = [
 let print_unknown ppf _ = Format.fprintf ppf "unknown error"
 
 let main () =
+  let addr = Base58.Bitcoin.of_string_exn "mtaGjUwusMAyx451M26KAJq6a8BiEJyMUd" in
   begin
-    tx_by_addr ~testnet:true (`Base58 "mtaGjUwusMAyx451M26KAJq6a8BiEJyMUd") >>= function
+    tx_by_addr ~testnet:true addr >>= function
     | Ok _ -> Lwt.return_unit
     | Error err -> Lwt_log.error (Http.string_of_error err)
   end >>= fun () ->
-  utxos ~testnet:true [(`Base58 "mtaGjUwusMAyx451M26KAJq6a8BiEJyMUd")] >|= function
+  utxos ~testnet:true [addr] >|= function
   | Ok res ->
       ListLabels.iter txs ~f:begin fun t ->
         let json = Ezjsonm.from_string t in

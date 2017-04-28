@@ -83,7 +83,7 @@ let utxos ?(testnet=false) = function
   | addrs ->
       let url = if testnet then testnet_base_url else base_url in
       let url = Uri.with_path url "/api/addrs/utxo" in
-      let params = ["addrs", ListLabels.map addrs ~f:Base58.to_string] in
+      let params = ["addrs", ListLabels.map addrs ~f:Base58.Bitcoin.to_string] in
       safe_post ~params ~encoding:Json_encoding.(list Utxo.encoding) url
 
 let broadcast_tx ?(testnet=false) (`Hex rawtx_hex) =
@@ -93,10 +93,10 @@ let broadcast_tx ?(testnet=false) (`Hex rawtx_hex) =
   let encoding = Json_encoding.(obj1 (req "txid" string)) in
   safe_post ~params ~encoding url >>| R.map (fun txid -> `Hex txid)
 
-let tx_by_addr ?(testnet=false) (`Base58 addr) =
+let tx_by_addr ?(testnet=false) addr =
   let url = if testnet then testnet_base_url else base_url in
   let url = Uri.with_path url "/api/txs" in
-  let url = Uri.with_query url ["address", [addr]] in
+  let url = Uri.with_query url ["address", [ Base58.Bitcoin.to_string addr]] in
   let encoding =
     let open Json_encoding in
     conv (fun s -> (0, s)) (fun (_, s) -> s)
