@@ -1,8 +1,8 @@
 module Tx : sig
   module ScriptSig : sig
     type t = {
-      asm : string ;
-      hex : string ;
+      asm : string ; (* opcodes *)
+      hex : Hex.t ; (* serialized *)
     }
 
     val encoding : t Json_encoding.encoding
@@ -14,8 +14,8 @@ module Tx : sig
 
     type t = {
       addresses : Base58.t list ;
-      asm : string list ;
-      hex : string ;
+      asm : string list ; (* opcodes *)
+      hex : Hex.t ; (* serialized *)
       typ : typ ;
     }
 
@@ -24,11 +24,11 @@ module Tx : sig
 
   module Vin : sig
     type input =
-      | Coinbase of string
+      | Coinbase of Hex.t
       | Tx of {
-          txid : string ;
+          txid : Hex.t ;
           value: int ;
-          doubleSpentTxID: string option ;
+          doubleSpentTxID: Hex.t option ;
           addr : Base58.t ;
           scriptSig : ScriptSig.t ;
           vout : int ;
@@ -46,7 +46,7 @@ module Tx : sig
     type t = {
       n : int ;
       value : int ;
-      spentTxId : string option ;
+      spentTxId : Hex.t option ;
       spentIndex : int option ;
       spentHeight : int option ;
       scriptPubKey : ScriptPubKey.t ;
@@ -56,7 +56,7 @@ module Tx : sig
   end
 
   type t = {
-    txid : string ;
+    txid : Hex.t ;
     version : int ;
     isCoinbase : bool ;
     size : int ;
@@ -90,7 +90,7 @@ module Utxo : sig
 
   type t = {
     address : Base58.t ;
-    txid : string ;
+    txid : Hex.t ;
     amount : int ; (* in sats *)
     confirmed: confirmed ;
   }

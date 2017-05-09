@@ -76,7 +76,7 @@ let rawtx ?(testnet=false) (`Hex txid) =
   let url = if testnet then testnet_base_url else base_url in
   let url = Uri.with_path url (Printf.sprintf "/api/rawtx/%s" txid) in
   let encoding = Json_encoding.(obj1 (req "rawtx" string)) in
-  safe_get ~encoding url >>| R.map (fun txid -> `Hex txid)
+  safe_get ~encoding url >>| R.map (fun tx_hex -> Hex.to_string (`Hex tx_hex))
 
 let utxos ?(testnet=false) = function
   | [] -> Lwt.return (Ok [])
@@ -86,9 +86,10 @@ let utxos ?(testnet=false) = function
       let params = ["addrs", ListLabels.map addrs ~f:Base58.Bitcoin.to_string] in
       safe_post ~params ~encoding:Json_encoding.(list Utxo.encoding) url
 
-let broadcast_tx ?(testnet=false) (`Hex rawtx_hex) =
+let broadcast_tx ?(testnet=false) rawtx_bytes =
   let url = if testnet then testnet_base_url else base_url in
   let url = Uri.with_path url "/api/tx/send" in
+  let `Hex rawtx_hex = Hex.of_string rawtx_bytes in
   let params = ["rawtx", [rawtx_hex]] in
   let encoding = Json_encoding.(obj1 (req "txid" string)) in
   safe_post ~params ~encoding url >>| R.map (fun txid -> `Hex txid)

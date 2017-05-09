@@ -35,8 +35,9 @@ let fetch_utxos =
     Base58.Bitcoin.pp in
   let addrs =
     Arg.(non_empty & (pos_all payment_addr []) & info [] ~docv:"ADDR") in
+  let doc = "Fetch UTXOs" in
   Term.(const fetch_utxos $ loglevel $ testnet $ addrs),
-  Term.info "fetch-utxos"
+  Term.info "fetch-utxos" ~doc
 
 let default_cmd =
   let doc = "Cmdline utility for Blockexplorer.com" in

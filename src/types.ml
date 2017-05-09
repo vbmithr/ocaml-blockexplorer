@@ -2,16 +2,16 @@ module Tx = struct
   module ScriptSig = struct
     type t = {
       asm : string ;
-      hex : string ;
+      hex : Hex.t ;
     }
 
-    let empty = { asm = "" ; hex = "" }
+    let empty = { asm = "" ; hex = `Hex "" }
 
     let encoding =
       let open Json_encoding in
       conv
-        (fun { asm ; hex } -> (asm, hex))
-        (fun (asm, hex) -> { asm ; hex })
+        (fun { asm ; hex = `Hex hex } -> (asm, hex))
+        (fun (asm, hex) -> { asm ; hex = `Hex hex })
         (obj2
            (req "asm" string)
            (req "hex" string))
@@ -31,19 +31,20 @@ module Tx = struct
     type t = {
       addresses : Base58.t list ;
       asm : string list ;
-      hex : string ;
+      hex : Hex.t ;
       typ : typ ;
     }
 
     let encoding =
       let open Json_encoding in
       conv
-        (fun { addresses ; asm ; hex ; typ } ->
+        (fun { addresses ; asm ; hex = `Hex hex; typ } ->
            let typ = typ_to_string typ in
            let asm = String.concat " " asm in
            let addresses = ListLabels.map addresses ~f:Base58.to_string in
            (addresses, asm, hex, typ))
         (fun (addresses, asm, hex, typ) ->
+           let hex = `Hex hex in
            let typ = typ_of_string typ in
            let asm = String.split_on_char ' ' asm in
            let addresses =
@@ -58,11 +59,11 @@ module Tx = struct
 
   module Vin = struct
     type input =
-      | Coinbase of string
+      | Coinbase of Hex.t
       | Tx of {
-          txid : string ;
+          txid : Hex.t ;
           value: int ;
-          doubleSpentTxID: string option ;
+          doubleSpentTxID: Hex.t option ;
           addr : Base58.t ;
           scriptSig : ScriptSig.t ;
           vout : int ;
@@ -80,24 +81,28 @@ module Tx = struct
       let open Json_encoding in
       conv
         (fun { sequence ; n ; input } -> match input with
-           | Coinbase h ->
-               (sequence, n, Some h, None, None, None,
+           | Coinbase (`Hex hex) ->
+               (sequence, n, Some hex, None, None, None,
                 None, None, None, None)
-           | Tx { txid ; value ; doubleSpentTxID ; addr = (`Base58 b58);
+           | Tx { txid = `Hex txid_hex ; value ;
+                  doubleSpentTxID ;
+                  addr = (`Base58 b58);
                   scriptSig ; vout } ->
-               (sequence, n, None, Some txid, Some value, None, doubleSpentTxID,
-                Some b58, Some scriptSig, Some vout))
+             let doubleSpentTxID =
+               Base.Option.map doubleSpentTxID ~f:(function `Hex id -> id) in
+             (sequence, n, None, Some txid_hex, Some value, None, doubleSpentTxID,
+              Some b58, Some scriptSig, Some vout))
         (fun (sequence, n, coinbase, txid, valueSat, value, doubleSpentTxID,
               addr, scriptSig, vout) ->
           match coinbase with
-          | Some h -> { sequence ; n ; input = Coinbase h }
+          | Some h -> { sequence ; n ; input = Coinbase (`Hex h) }
           | None ->
               match txid, valueSat, addr, scriptSig, vout with
               | Some txid, Some valueSat, Some addr, Some scriptSig, Some vout ->
               let input = Tx {
-                  txid ;
+                  txid = `Hex txid ;
                   value = valueSat ;
-                  doubleSpentTxID ;
+                  doubleSpentTxID = Base.Option.map doubleSpentTxID ~f:(fun id -> `Hex id) ;
                   addr = Base58.of_string_exn addr ;
                   scriptSig ;
                   vout } in
@@ -120,7 +125,7 @@ module Tx = struct
     type t = {
       n : int ;
       value : int ;
-      spentTxId : string option ;
+      spentTxId : Hex.t option ;
       spentIndex : int option ;
       spentHeight : int option ;
       scriptPubKey : ScriptPubKey.t ;
@@ -131,9 +136,11 @@ module Tx = struct
       conv
         (fun { n ; value ; spentTxId ; spentIndex ; spentHeight ; scriptPubKey } ->
            let value = string_of_float (float_of_int value /. 1e8) in
+           let spentTxId = Base.Option.map spentTxId ~f:(function `Hex id -> id) in
            (n, value, spentTxId, spentIndex, spentHeight, scriptPubKey))
         (fun (n, value, spentTxId, spentIndex, spentHeight, scriptPubKey) ->
            let value = int_of_float (float_of_string value *. 1e8) in
+           let spentTxId = Base.Option.map spentTxId ~f:(fun id -> `Hex id) in
            { n ; value ; spentTxId ; spentIndex ; spentHeight ; scriptPubKey })
         (obj6
            (req "n" int)
@@ -145,7 +152,7 @@ module Tx = struct
   end
 
   type t = {
-    txid : string ;
+    txid : Hex.t ;
     version : int ;
     isCoinbase : bool ;
     size : int ;
@@ -167,7 +174,7 @@ module Tx = struct
   let encoding =
     let open Json_encoding in
     conv
-      (fun { txid ; version ; isCoinbase ; size ; time ; locktime ; confirmations ;
+      (fun { txid = `Hex txid ; version ; isCoinbase ; size ; time ; locktime ; confirmations ;
              valueIn ; valueOut ; fees ;
              blockheight ; blocktime ; blockhash ; vin ; vout } ->
         let time = Ptime.to_float_s time in
@@ -189,7 +196,7 @@ module Tx = struct
         let valueIn = int_of_float (valueIn *. 1e8) in
         let valueOut = int_of_float (valueOut *. 1e8) in
         let fees = int_of_float (fees *. 1e8) in
-        { txid ; version ; isCoinbase ; size ; time ; locktime ; confirmations ;
+        { txid = `Hex txid ; version ; isCoinbase ; size ; time ; locktime ; confirmations ;
              valueIn ; valueOut ; fees ;
              blockheight ; blocktime ; blockhash ; vin ; vout })
       (merge_objs
@@ -232,12 +239,12 @@ module Utxo = struct
 
   type t = {
     address : Base58.t ;
-    txid : string ;
+    txid : Hex.t ;
     amount : int ; (* in sats *)
     confirmed: confirmed ;
   }
 
-  let pp ppf { address = `Base58 b58 ; txid ; amount ; confirmed } =
+  let pp ppf { address = `Base58 b58 ; txid = `Hex txid ; amount ; confirmed } =
     Format.fprintf ppf
       "{@[<hov 1> address = %s ;@;txid = %s ;@;amount = %d ;@;confirmed = %a }@]"
       b58 txid amount pp_confirmed confirmed
@@ -245,11 +252,12 @@ module Utxo = struct
   let encoding =
     let open Json_encoding in
     conv
-      (fun { address = `Base58 b58 ; txid ; amount ; confirmed } ->
+      (fun { address = `Base58 b58 ; txid = `Hex txid ; amount ; confirmed } ->
          let sats = float_of_int amount in
          let amount = sats /. 1e8 in
          ( b58, txid, None, 0., None, amount, sats, None, 0, None))
       (fun (address, txid, vout, ts, scriptPubKey, _amount, sats, height, confirmations, _) ->
+         let txid = `Hex txid in
          let address = Base58.of_string_exn address in
          let ts = match Ptime.of_float_s ts with
            | None -> invalid_arg "Ptime.of_float_s"
