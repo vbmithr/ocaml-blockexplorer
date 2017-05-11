@@ -9,6 +9,8 @@ let txs = [
   {|{"txid":"cd07745d6632049cf2a38fcf8eee3977a78bd4206aba9b2f86327d947c5ca4cb","version":1,"locktime":0,"vin":[{"txid":"507375cc687172858f960183f90baea8978a08aef5055d84983de9a07cd620ba","vout":1,"scriptSig":{"asm":"3045022100a9734d2e707081d6217c1fc80ee38e9c5a1667a426a2ff8f5c75da30320de25202200fd130373108d47c1ec8717377832906da3616403fe1401e52603703ceadd509[ALL] 026cd44404d016a66498458c7356818755587a553c32cfbdfe74d1d352f888b784","hex":"483045022100a9734d2e707081d6217c1fc80ee38e9c5a1667a426a2ff8f5c75da30320de25202200fd130373108d47c1ec8717377832906da3616403fe1401e52603703ceadd5090121026cd44404d016a66498458c7356818755587a553c32cfbdfe74d1d352f888b784"},"sequence":4294967295,"n":0,"addr":"1CaTdKDD4imFXYJ7Q9Y8aNY32yscHRmW8R","valueSat":2667430,"value":0.0266743,"doubleSpentTxID":null}],"vout":[{"value":"0.02625700","n":0,"scriptPubKey":{"hex":"76a91463940abd17ba3e7ceedfe960d9f19d5f2b9596c788ac","asm":"OP_DUP OP_HASH160 63940abd17ba3e7ceedfe960d9f19d5f2b9596c7 OP_EQUALVERIFY OP_CHECKSIG","addresses":["1A5XF8K7ehBWHZWexddcBJvmdSegZFtGRi"],"type":"pubkeyhash"},"spentTxId":null,"spentIndex":null,"spentHeight":null},{"value":"0.00005570","n":1,"scriptPubKey":{"hex":"76a914ed1fddfca0d4cf287fe0659cad4f3a7af9ce884e88ac","asm":"OP_DUP OP_HASH160 ed1fddfca0d4cf287fe0659cad4f3a7af9ce884e OP_EQUALVERIFY OP_CHECKSIG","addresses":["1NcoKdcVMSN5563GrZNToNJ6hQLUKM1PwT"],"type":"pubkeyhash"},"spentTxId":null,"spentIndex":null,"spentHeight":null}],"blockheight":-1,"confirmations":0,"time":1491989847,"valueOut":0.0263127,"size":226,"valueIn":0.0266743,"fees":0.0003616}|}
 ]
 
+let rawblock_hash = `Hex "0000000000000000079c58e8b5bce4217f7515a74b170049398ed9b8428beb4a"
+
 let print_unknown ppf _ = Format.fprintf ppf "unknown error"
 
 let main () =
@@ -17,6 +19,14 @@ let main () =
     tx_by_addr ~testnet:true addr >>= function
     | Ok _ -> Lwt.return_unit
     | Error err -> Lwt_log.error (Http.string_of_error err)
+  end >>= fun () ->
+  begin best_block_hash () >>= function
+  | Ok _ -> Lwt.return_unit
+  | Error err -> Lwt_log.error (Http.string_of_error err)
+  end >>= fun () ->
+  begin rawblock rawblock_hash >>= function
+  | Ok _ -> Lwt.return_unit
+  | Error err -> Lwt_log.error (Http.string_of_error err)
   end >>= fun () ->
   utxos ~testnet:true [addr] >|= function
   | Ok res ->

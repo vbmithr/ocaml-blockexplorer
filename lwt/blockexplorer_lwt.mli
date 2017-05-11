@@ -22,3 +22,10 @@ val broadcast_tx :
 
 val tx_by_addr :
   ?testnet:bool -> Base58.Bitcoin.t -> Tx.t list Http.result Lwt.t
+
+val best_block_hash : ?testnet:bool -> unit -> Hex.t Http.result Lwt.t
+
+val rawblock : ?testnet:bool -> Hex.t -> string Http.result Lwt.t
+(** [rawblock ?testnet blockhash] returns [Ok bytes], where bytes is
+    the binary representation of block hash [blockhash], or an
+    error. *)

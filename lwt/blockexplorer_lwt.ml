@@ -69,12 +69,12 @@ let testnet_base_url = Uri.of_string "https://testnet.blockexplorer.com"
 
 let tx ?(testnet=false) (`Hex txid) =
   let url = if testnet then testnet_base_url else base_url in
-  let url = Uri.with_path url (Printf.sprintf "/api/tx/%s" txid) in
+  let url = Uri.with_path url ("/api/tx/" ^ txid) in
   safe_get ~encoding:Tx.encoding url
 
 let rawtx ?(testnet=false) (`Hex txid) =
   let url = if testnet then testnet_base_url else base_url in
-  let url = Uri.with_path url (Printf.sprintf "/api/rawtx/%s" txid) in
+  let url = Uri.with_path url ("/api/rawtx/" ^ txid) in
   let encoding = Json_encoding.(obj1 (req "rawtx" string)) in
   safe_get ~encoding url >>| R.map (fun tx_hex -> Hex.to_string (`Hex tx_hex))
 
@@ -103,3 +103,20 @@ let tx_by_addr ?(testnet=false) addr =
     conv (fun s -> (0, s)) (fun (_, s) -> s)
       (obj2 (req "pagesTotal" int) (req "txs" (list Tx.encoding))) in
   safe_get ~encoding url
+
+let best_block_hash ?(testnet=false) () =
+  let url = if testnet then testnet_base_url else base_url in
+  let url = Uri.with_path url "/api/status" in
+  let url = Uri.with_query url ["q", [ "getBestBlockHash" ]] in
+  let encoding =
+    Json_encoding.(obj1 (req "bestblockhash" string)) in
+  safe_get ~encoding url >>| R.map (fun blockhash -> `Hex blockhash)
+
+let rawblock ?(testnet=false) (`Hex blockhash) =
+  let url = if testnet then testnet_base_url else base_url in
+  let url = Uri.with_path url ("/api/rawblock/" ^ blockhash) in
+  let encoding =
+    Json_encoding.(obj1 (req "rawblock" string)) in
+  safe_get ~encoding url >>|
+  R.map (fun block_hex -> Hex.to_string (`Hex block_hex))
+
