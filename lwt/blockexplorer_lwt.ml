@@ -104,6 +104,22 @@ let tx_by_addr ?(testnet=false) addr =
       (obj2 (req "pagesTotal" int) (req "txs" (list Tx.encoding))) in
   safe_get ~encoding url
 
+let network_status ?(testnet=false) () =
+  let url = if testnet then testnet_base_url else base_url in
+  let url = Uri.with_path url "/api/status" in
+  let url = Uri.with_query url ["q", [ "getInfo" ]] in
+  let encoding =
+    Json_encoding.(obj1 (req "info" Network_status.encoding)) in
+  safe_get ~encoding url
+
+let hash_of_block_index ?(testnet=false) index =
+  let url = if testnet then testnet_base_url else base_url in
+  let url = Uri.with_path url ("/api/block-index/" ^ string_of_int index) in
+  let encoding =
+    Json_encoding.(obj1 (req "blockHash" string)) in
+  safe_get ~encoding url >>|
+  R.map (fun blockhash -> `Hex blockhash)
+
 let best_block_hash ?(testnet=false) () =
   let url = if testnet then testnet_base_url else base_url in
   let url = Uri.with_path url "/api/status" in

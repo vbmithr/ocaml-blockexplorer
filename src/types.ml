@@ -286,3 +286,48 @@ module Utxo = struct
   let to_string t =
     Format.asprintf "%a" pp t
 end
+
+module Network_status = struct
+  type t = {
+    version : int ;
+    protocolversion : int ;
+    blocks : int ;
+    timeoffset : int ;
+    connections : int ;
+    proxy : string ;
+    difficulty : float ;
+    testnet : bool ;
+    relayfee : float ;
+    errors : string ;
+    network : string ;
+  }
+
+  let encoding =
+    let open Json_encoding in
+    conv
+      (fun { version ; protocolversion ; blocks ; timeoffset ;
+             connections ; proxy ; difficulty ; testnet ; relayfee ;
+             errors ; network } ->
+        ((version, protocolversion, blocks, timeoffset, connections,
+          proxy, difficulty, testnet, relayfee, errors), network))
+      (fun ((version, protocolversion, blocks, timeoffset, connections,
+            proxy, difficulty, testnet, relayfee, errors), network) ->
+       { version ; protocolversion ; blocks ; timeoffset ;
+         connections ; proxy ; difficulty ; testnet ; relayfee ;
+         errors ; network })
+      (merge_objs
+         (obj10
+            (req "version" int)
+            (req "protocolversion" int)
+            (req "blocks" int)
+            (req "timeoffset" int)
+            (req "connections" int)
+            (req "proxy" string)
+            (req "difficulty" float)
+            (req "testnet" bool)
+            (req "relayfee" float)
+            (req "errors" string)
+         )
+         (obj1
+           (req "network" string)))
+end

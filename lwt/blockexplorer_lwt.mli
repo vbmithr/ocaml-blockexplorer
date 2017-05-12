@@ -23,6 +23,10 @@ val broadcast_tx :
 val tx_by_addr :
   ?testnet:bool -> Base58.Bitcoin.t -> Tx.t list Http.result Lwt.t
 
+val network_status : ?testnet:bool -> unit -> Network_status.t Http.result Lwt.t
+
+val hash_of_block_index : ?testnet:bool -> int -> Hex.t Http.result Lwt.t
+
 val best_block_hash : ?testnet:bool -> unit -> Hex.t Http.result Lwt.t
 
 val rawblock : ?testnet:bool -> Hex.t -> string Http.result Lwt.t

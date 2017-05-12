@@ -20,6 +20,14 @@ let main () =
     | Ok _ -> Lwt.return_unit
     | Error err -> Lwt_log.error (Http.string_of_error err)
   end >>= fun () ->
+  begin network_status () >>= function
+    | Ok _ -> Lwt.return_unit
+    | Error err -> Lwt_log.error (Http.string_of_error err)
+  end >>= fun () ->
+  begin hash_of_block_index 0 >>= function
+    | Ok _ -> Lwt.return_unit
+    | Error err -> Lwt_log.error (Http.string_of_error err)
+  end >>= fun () ->
   begin best_block_hash () >>= function
   | Ok _ -> Lwt.return_unit
   | Error err -> Lwt_log.error (Http.string_of_error err)

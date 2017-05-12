@@ -100,3 +100,21 @@ module Utxo : sig
   val pp : Format.formatter -> t -> unit
   val to_string : t -> string
 end
+
+module Network_status : sig
+  type t = {
+    version : int ;
+    protocolversion : int ;
+    blocks : int ;
+    timeoffset : int ;
+    connections : int ;
+    proxy : string ;
+    difficulty : float ;
+    testnet : bool ;
+    relayfee : float ;
+    errors : string ;
+    network : string ;
+  }
+
+  val encoding : t Json_encoding.encoding
+end
