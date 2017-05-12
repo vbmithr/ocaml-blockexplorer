@@ -33,3 +33,5 @@ val rawblock : ?testnet:bool -> Hex.t -> string Http.result Lwt.t
 (** [rawblock ?testnet blockhash] returns [Ok bytes], where bytes is
     the binary representation of block hash [blockhash], or an
     error. *)
+
+val block : ?testnet:bool -> Hex.t -> Block.t Http.result Lwt.t

@@ -136,3 +136,8 @@ let rawblock ?(testnet=false) (`Hex blockhash) =
   safe_get ~encoding url >>|
   R.map (fun block_hex -> Hex.to_string (`Hex block_hex))
 
+let block ?(testnet=false) (`Hex blockhash) =
+  let url = Uri.of_string
+      (if testnet then "https://test.webbtc.com" else "https://webbtc.com") in
+  let url = Uri.with_path url ("block/" ^ blockhash ^ ".json") in
+  safe_get ~encoding:Block.encoding url

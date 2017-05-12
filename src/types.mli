@@ -117,4 +117,27 @@ module Network_status : sig
   }
 
   val encoding : t Json_encoding.encoding
+
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
+end
+
+module Block : sig
+  type t = {
+    hash : Hex.t ;
+    ver : int ;
+    prev_block : Hex.t ;
+    mrkl_root : Hex.t ;
+    time : Ptime.t ;
+    bits : Int32.t ;
+    nonce : Int32.t ;
+    n_tx : int ;
+    size : int ;
+    tx : Tx.t list ;
+  }
+
+  val encoding : t Json_encoding.encoding
+
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
 end

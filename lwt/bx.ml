@@ -68,6 +68,24 @@ let fetch_rawblock =
   Term.(const fetch_rawblock $ loglevel $ testnet $ blockhash $ dest),
   Term.info "fetch-rawblock" ~doc
 
+let fetch_block loglevel testnet blockhash =
+  begin block ~testnet (Hex.of_string blockhash) >>= function
+    | Error err -> Lwt_log.error (Http.string_of_error err)
+    | Ok block ->
+      Format.printf "%a@." Block.pp block ;
+      Lwt.return_unit
+  end
+
+let fetch_block loglevel testnet blockhash =
+  Lwt_main.run (fetch_block loglevel testnet blockhash)
+
+let fetch_block =
+  let blockhash =
+    Arg.(required & (pos 0 (some hex) None) & info [] ~docv:"BLOCK_HASH") in
+  let doc = "Fetch block." in
+  Term.(const fetch_block $ loglevel $ testnet $ blockhash),
+  Term.info "fetch-block" ~doc
+
 let default_cmd =
   let doc = "Cmdline utility for Blockexplorer.com" in
   Term.(ret (const (`Help (`Pager, None)))),
@@ -76,6 +94,7 @@ let default_cmd =
 let cmds = [
   fetch_utxos ;
   fetch_rawblock ;
+  fetch_block ;
 ]
 
 let () = match Term.eval_choice default_cmd cmds with

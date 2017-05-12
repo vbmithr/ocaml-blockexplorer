@@ -326,8 +326,63 @@ module Network_status = struct
             (req "difficulty" float)
             (req "testnet" bool)
             (req "relayfee" float)
-            (req "errors" string)
-         )
+            (req "errors" string))
          (obj1
-           (req "network" string)))
+            (req "network" string)))
+
+  let pp ppf t =
+    let t_json = Json_encoding.construct encoding t in
+    Json_repr.(pp (module Ezjsonm) ppf t_json)
+
+  let show t =
+    Format.asprintf "%a" pp t
+end
+
+module Block = struct
+  type t = {
+    hash : Hex.t ;
+    ver : int ;
+    prev_block : Hex.t ;
+    mrkl_root : Hex.t ;
+    time : Ptime.t ;
+    bits : Int32.t ;
+    nonce : Int32.t ;
+    n_tx : int ;
+    size : int ;
+    tx : Tx.t list ;
+  }
+
+  let encoding =
+    let open Json_encoding in
+    conv
+      (fun { hash = `Hex hash ; ver ; prev_block = `Hex prev_block ;
+             mrkl_root = `Hex mrkl_root ; time ; bits ; nonce ; n_tx ; size ; tx } ->
+        let time = Ptime.to_float_s time in
+        (hash, ver, prev_block, mrkl_root, time, bits, nonce, n_tx, size, tx))
+      (fun (hash, ver, prev_block, mrkl_root, time, bits, nonce, n_tx, size, tx) ->
+         let time =
+           Base.Option.value_exn ~message:"Ptime.of_float_s" (Ptime.of_float_s time) in
+         { hash = `Hex hash ;
+           ver ;
+           prev_block = `Hex prev_block ;
+           mrkl_root = `Hex mrkl_root ;
+           time ; bits ; nonce ; n_tx ; size ; tx })
+      (obj10
+         (req "hash" string)
+         (req "ver" int)
+         (req "prev_block" string)
+         (req "mrkl_root" string)
+         (req "time" float)
+         (req "bits" int32)
+         (req "nonce" int32)
+         (req "n_tx" int)
+         (req "size" int)
+         (req "tx" (list Tx.encoding)))
+
+  let pp ppf t =
+    let t_json = Json_encoding.construct encoding t in
+    Json_repr.(pp (module Ezjsonm) ppf t_json)
+
+  let show t =
+    Format.asprintf "%a" pp t
 end
