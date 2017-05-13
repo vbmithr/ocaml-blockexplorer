@@ -29,7 +29,7 @@ module Tx = struct
       | Pubkeyhash -> "pubkeyhash"
 
     type t = {
-      addresses : Base58.t list ;
+      addresses : Base58.Bitcoin.t list ;
       asm : string list ;
       hex : Hex.t ;
       typ : typ ;
@@ -41,14 +41,14 @@ module Tx = struct
         (fun { addresses ; asm ; hex = `Hex hex; typ } ->
            let typ = typ_to_string typ in
            let asm = String.concat " " asm in
-           let addresses = ListLabels.map addresses ~f:Base58.to_string in
+           let addresses = ListLabels.map addresses ~f:Base58.Bitcoin.to_string in
            (addresses, asm, hex, typ))
         (fun (addresses, asm, hex, typ) ->
            let hex = `Hex hex in
            let typ = typ_of_string typ in
            let asm = String.split_on_char ' ' asm in
            let addresses =
-             ListLabels.map addresses ~f:Base58.of_string_exn in
+             ListLabels.map addresses ~f:Base58.Bitcoin.of_string_exn in
            { addresses ; asm ; hex ; typ })
         (obj4
            (req "addresses" (list string))
@@ -64,7 +64,7 @@ module Tx = struct
           txid : Hex.t ;
           value: int ;
           doubleSpentTxID: Hex.t option ;
-          addr : Base58.t ;
+          addr : Base58.Bitcoin.t ;
           scriptSig : ScriptSig.t ;
           vout : int ;
         }
@@ -86,12 +86,13 @@ module Tx = struct
                 None, None, None, None)
            | Tx { txid = `Hex txid_hex ; value ;
                   doubleSpentTxID ;
-                  addr = (`Base58 b58);
+                  addr ;
                   scriptSig ; vout } ->
              let doubleSpentTxID =
                Base.Option.map doubleSpentTxID ~f:(function `Hex id -> id) in
+             let addr = Base58.Bitcoin.to_string addr in
              (sequence, n, None, Some txid_hex, Some value, None, doubleSpentTxID,
-              Some b58, Some scriptSig, Some vout))
+              Some addr, Some scriptSig, Some vout))
         (fun (sequence, n, coinbase, txid, valueSat, value, doubleSpentTxID,
               addr, scriptSig, vout) ->
           match coinbase with
@@ -103,7 +104,7 @@ module Tx = struct
                   txid = `Hex txid ;
                   value = valueSat ;
                   doubleSpentTxID = Base.Option.map doubleSpentTxID ~f:(fun id -> `Hex id) ;
-                  addr = Base58.of_string_exn addr ;
+                  addr = Base58.Bitcoin.of_string_exn addr ;
                   scriptSig ;
                   vout } in
               { sequence ; n ; input }
@@ -238,27 +239,28 @@ module Utxo = struct
         confirmations vout scriptPubKey height
 
   type t = {
-    address : Base58.t ;
+    address : Base58.Bitcoin.t ;
     txid : Hex.t ;
     amount : int ; (* in sats *)
     confirmed: confirmed ;
   }
 
-  let pp ppf { address = `Base58 b58 ; txid = `Hex txid ; amount ; confirmed } =
+  let pp ppf { address ; txid = `Hex txid ; amount ; confirmed } =
     Format.fprintf ppf
-      "{@[<hov 1> address = %s ;@;txid = %s ;@;amount = %d ;@;confirmed = %a }@]"
-      b58 txid amount pp_confirmed confirmed
+      "{@[<hov 1> address = %a ;@;txid = %s ;@;amount = %d ;@;confirmed = %a }@]"
+      Base58.Bitcoin.pp address txid amount pp_confirmed confirmed
 
   let encoding =
     let open Json_encoding in
     conv
-      (fun { address = `Base58 b58 ; txid = `Hex txid ; amount ; confirmed } ->
+      (fun { address ; txid = `Hex txid ; amount ; confirmed } ->
          let sats = float_of_int amount in
          let amount = sats /. 1e8 in
-         ( b58, txid, None, 0., None, amount, sats, None, 0, None))
+         let addr = Base58.Bitcoin.to_string address in
+         (addr , txid, None, 0., None, amount, sats, None, 0, None))
       (fun (address, txid, vout, ts, scriptPubKey, _amount, sats, height, confirmations, _) ->
          let txid = `Hex txid in
-         let address = Base58.of_string_exn address in
+         let address = Base58.Bitcoin.of_string_exn address in
          let ts = match Ptime.of_float_s ts with
            | None -> invalid_arg "Ptime.of_float_s"
            | Some ts -> ts in
