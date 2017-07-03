@@ -1,3 +1,5 @@
+open Base
+
 open Rresult
 open Lwt.Infix
 open Cohttp_lwt_unix
@@ -28,7 +30,7 @@ let safe_get ?headers ~encoding url =
         R.return (Json_encoding.destruct encoding json)
       with exn ->
         let pp = Json_encoding.print_error ?print_unknown:None in
-        let str = Format.asprintf "%a" pp exn in
+        let str = Caml.Format.asprintf "%a" pp exn in
         raise (Data_encoding str)
 
     end
@@ -53,7 +55,7 @@ let safe_post ?headers ~params ~encoding url =
         R.return (Json_encoding.destruct encoding json)
       with exn ->
         let pp = Json_encoding.print_error ?print_unknown:None in
-        let str = Format.asprintf "%a" pp exn in
+        let str = Caml.Format.asprintf "%a" pp exn in
         raise (Data_encoding str)
     end
     begin function
@@ -83,7 +85,7 @@ let utxos ?(testnet=false) = function
   | addrs ->
       let url = if testnet then testnet_base_url else base_url in
       let url = Uri.with_path url "/api/addrs/utxo" in
-      let params = ["addrs", ListLabels.map addrs ~f:Base58.Bitcoin.to_string] in
+      let params = ["addrs", List.map addrs ~f:Base58.Bitcoin.to_string] in
       safe_post ~params ~encoding:Json_encoding.(list Utxo.encoding) url
 
 let broadcast_tx ?(testnet=false) rawtx_bytes =
@@ -104,6 +106,24 @@ let tx_by_addr ?(testnet=false) addr =
       (obj2 (req "pagesTotal" int) (req "txs" (list Tx.encoding))) in
   safe_get ~encoding url
 
+let tx_by_addrs ?(testnet=false) ?start ?stop addrs =
+  let url = if testnet then testnet_base_url else base_url in
+  let url = Uri.with_path url "/api/addrs/txs" in
+  let params = List.filter_opt [
+      Some ("addrs", List.map addrs ~f:Base58.Bitcoin.to_string) ;
+      Option.map start ~f:(fun i -> "from", [Int.to_string i]) ;
+      Option.map stop ~f:(fun i -> "to", [Int.to_string i]) ;
+    ] in
+  let encoding =
+    let open Json_encoding in
+    conv (fun s -> (0, 0, 0, s)) (fun (_, _, _, s) -> s)
+      (obj4
+         (req "totalItems" int)
+         (req "from" int)
+         (req "to" int)
+         (req "items" (list Tx.encoding))) in
+  safe_post ~params ~encoding url
+
 let network_status ?(testnet=false) () =
   let url = if testnet then testnet_base_url else base_url in
   let url = Uri.with_path url "/api/status" in
@@ -114,7 +134,7 @@ let network_status ?(testnet=false) () =
 
 let hash_of_block_index ?(testnet=false) index =
   let url = if testnet then testnet_base_url else base_url in
-  let url = Uri.with_path url ("/api/block-index/" ^ string_of_int index) in
+  let url = Uri.with_path url ("/api/block-index/" ^ Int.to_string index) in
   let encoding =
     Json_encoding.(obj1 (req "blockHash" string)) in
   safe_get ~encoding url >>|

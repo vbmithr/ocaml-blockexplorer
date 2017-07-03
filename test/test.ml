@@ -15,8 +15,14 @@ let print_unknown ppf _ = Format.fprintf ppf "unknown error"
 
 let main () =
   let addr = Base58.Bitcoin.of_string_exn "mtaGjUwusMAyx451M26KAJq6a8BiEJyMUd" in
+  let addr2 = Base58.Bitcoin.of_string_exn "2NF2baYuJAkCKo5onjUKEPdARQkZ6SYyKd5" in
   begin
     tx_by_addr ~testnet:true addr >>= function
+    | Ok _ -> Lwt.return_unit
+    | Error err -> Lwt_log.error (Http.string_of_error err)
+  end >>= fun () ->
+  begin
+    tx_by_addrs ~testnet:true [ addr ; addr2 ] >>= function
     | Ok _ -> Lwt.return_unit
     | Error err -> Lwt_log.error (Http.string_of_error err)
   end >>= fun () ->
