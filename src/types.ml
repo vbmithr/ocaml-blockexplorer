@@ -1,3 +1,5 @@
+open Base
+
 module Tx = struct
   module ScriptSig = struct
     type t = {
@@ -35,29 +37,29 @@ module Tx = struct
       addresses : Base58.Bitcoin.t list ;
       asm : string list ;
       hex : Hex.t ;
-      typ : typ ;
+      typ : typ option ;
     }
 
     let encoding =
       let open Json_encoding in
       conv
         (fun { addresses ; asm ; hex = `Hex hex; typ } ->
-           let typ = typ_to_string typ in
-           let asm = String.concat " " asm in
-           let addresses = ListLabels.map addresses ~f:Base58.Bitcoin.to_string in
+           let typ = Option.map ~f:typ_to_string typ in
+           let asm = String.concat ~sep:" " asm in
+           let addresses = List.map addresses ~f:Base58.Bitcoin.to_string in
            (addresses, asm, hex, typ))
         (fun (addresses, asm, hex, typ) ->
            let hex = `Hex hex in
-           let typ = typ_of_string typ in
-           let asm = String.split_on_char ' ' asm in
+           let typ = Option.map ~f:typ_of_string typ in
+           let asm = String.split ~on:' ' asm in
            let addresses =
-             ListLabels.map addresses ~f:Base58.Bitcoin.of_string_exn in
+             List.map addresses ~f:Base58.Bitcoin.of_string_exn in
            { addresses ; asm ; hex ; typ })
         (obj4
-           (req "addresses" (list string))
+           (dft "addresses" (list string) [])
            (req "hex" string)
            (req "asm" string)
-           (req "type" string))
+           (opt "type" string))
   end
 
   module Vin = struct
@@ -73,7 +75,7 @@ module Tx = struct
         }
 
     let unsigned_int =
-      Json_encoding.ranged_int ~minimum:0 ~maximum:max_int "unsigned int"
+      Json_encoding.ranged_int ~minimum:0 ~maximum:Int.max_value "unsigned int"
     type t = {
       sequence : int ;
       n : int ;
@@ -117,7 +119,7 @@ module Tx = struct
            (req "n" int)
            (opt "coinbase" string)
            (opt "txid" string)
-           (opt "valueSat" int)
+           (opt "valueSat" unsigned_int)
            (opt "value" float)
            (dft "doubleSpentTxID" (option string) None)
            (opt "addr" string)
@@ -139,11 +141,11 @@ module Tx = struct
       let open Json_encoding in
       conv
         (fun { n ; value ; spentTxId ; spentIndex ; spentHeight ; scriptPubKey } ->
-           let value = string_of_float (float_of_int value /. 1e8) in
+           let value = Float.(to_string (of_int value / 1e8)) in
            let spentTxId = Base.Option.map spentTxId ~f:(function `Hex id -> id) in
            (n, value, spentTxId, spentIndex, spentHeight, scriptPubKey))
         (fun (n, value, spentTxId, spentIndex, spentHeight, scriptPubKey) ->
-           let value = int_of_float (float_of_string value *. 1e8) in
+           let value = Int.of_float Float.(of_string value * 1e8) in
            let spentTxId = Base.Option.map spentTxId ~f:(fun id -> `Hex id) in
            { n ; value ; spentTxId ; spentIndex ; spentHeight ; scriptPubKey })
         (obj6
@@ -182,9 +184,9 @@ module Tx = struct
              valueIn ; valueOut ; fees ;
              blockheight ; blocktime ; blockhash ; vin ; vout } ->
         let time = Ptime.to_float_s time in
-        let valueIn = float_of_int valueIn /. 1e8 in
-        let valueOut = float_of_int valueOut /. 1e8 in
-        let fees = float_of_int fees /. 1e8 in
+        let valueIn = Float.(of_int valueIn / 1e8) in
+        let valueOut = Float.(of_int valueOut / 1e8) in
+        let fees = Float.(of_int fees / 1e8) in
         let blocktime = Base.Option.map blocktime
             ~f:(fun t -> Ptime.to_float_s t) in
         ((blockheight, blocktime, blockhash, vin, vout),
@@ -197,9 +199,9 @@ module Tx = struct
           Base.Option.value_exn (Ptime.of_float_s time) in
         let blocktime = Base.Option.bind blocktime
             ~f:(fun t -> Ptime.of_float_s t) in
-        let valueIn = int_of_float (valueIn *. 1e8) in
-        let valueOut = int_of_float (valueOut *. 1e8) in
-        let fees = int_of_float (fees *. 1e8) in
+        let valueIn = Float.(to_int (valueIn * 1e8)) in
+        let valueOut = Float.(to_int (valueOut * 1e8)) in
+        let fees = Float.(to_int (fees * 1e8)) in
         { txid = `Hex txid ; version ; isCoinbase ; size ; time ; locktime ; confirmations ;
              valueIn ; valueOut ; fees ;
              blockheight ; blocktime ; blockhash ; vin ; vout })
@@ -235,9 +237,9 @@ module Utxo = struct
 
   let pp_confirmed ppf = function
     | Unconfirmed ts ->
-      Format.fprintf ppf "Unconfirmed %a" Ptime.pp ts
+      Caml.Format.fprintf ppf "Unconfirmed %a" Ptime.pp ts
     | Confirmed { confirmations ; vout ; scriptPubKey ; height } ->
-      Format.fprintf ppf
+      Caml.Format.fprintf ppf
         "Confirmed {@[<hov 1> confirmations = %d ;@;vout = %d;@;scriptPubKey = %s ;@;height = %d }@]"
         confirmations vout scriptPubKey height
 
@@ -249,7 +251,7 @@ module Utxo = struct
   }
 
   let pp ppf { address ; txid = `Hex txid ; amount ; confirmed } =
-    Format.fprintf ppf
+    Caml.Format.fprintf ppf
       "{@[<hov 1> address = %a ;@;txid = %s ;@;amount = %d ;@;confirmed = %a }@]"
       Base58.Bitcoin.pp address txid amount pp_confirmed confirmed
 
@@ -257,8 +259,8 @@ module Utxo = struct
     let open Json_encoding in
     conv
       (fun { address ; txid = `Hex txid ; amount ; confirmed } ->
-         let sats = float_of_int amount in
-         let amount = sats /. 1e8 in
+         let sats = Float.of_int amount in
+         let amount = Float.(sats / 1e8) in
          let addr = Base58.Bitcoin.to_string address in
          (addr , txid, None, 0., None, amount, sats, None, 0, None))
       (fun (address, txid, vout, ts, scriptPubKey, _amount, sats, height, confirmations, _) ->
@@ -267,7 +269,7 @@ module Utxo = struct
          let ts = match Ptime.of_float_s ts with
            | None -> invalid_arg "Ptime.of_float_s"
            | Some ts -> ts in
-         let amount = int_of_float sats in
+         let amount = Int.of_float sats in
          let confirmed = match confirmations with
          | 0 -> Unconfirmed ts
          | n ->
@@ -289,7 +291,7 @@ module Utxo = struct
          (opt "confirmationsFromCache" bool))
 
   let to_string t =
-    Format.asprintf "%a" pp t
+    Caml.Format.asprintf "%a" pp t
 end
 
 module Network_status = struct
@@ -340,7 +342,7 @@ module Network_status = struct
     Json_repr.(pp (module Ezjsonm) ppf t_json)
 
   let show t =
-    Format.asprintf "%a" pp t
+    Caml.Format.asprintf "%a" pp t
 end
 
 module Block = struct
@@ -389,5 +391,5 @@ module Block = struct
     Json_repr.(pp (module Ezjsonm) ppf t_json)
 
   let show t =
-    Format.asprintf "%a" pp t
+    Caml.Format.asprintf "%a" pp t
 end

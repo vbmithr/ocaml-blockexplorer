@@ -17,7 +17,7 @@ module Tx : sig
       addresses : Base58.Bitcoin.t list ;
       asm : string list ; (* opcodes *)
       hex : Hex.t ; (* serialized *)
-      typ : typ ;
+      typ : typ option ;
     }
 
     val encoding : t Json_encoding.encoding
