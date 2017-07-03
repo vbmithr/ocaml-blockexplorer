@@ -20,13 +20,16 @@ module Tx = struct
   module ScriptPubKey = struct
     type typ =
       | Pubkeyhash
+      | Scripthash
 
     let typ_of_string = function
       | "pubkeyhash" -> Pubkeyhash
+      | "scripthash" -> Scripthash
       | _ -> invalid_arg "typ_of_string"
 
     let typ_to_string = function
       | Pubkeyhash -> "pubkeyhash"
+      | Scripthash -> "scripthash"
 
     type t = {
       addresses : Base58.Bitcoin.t list ;

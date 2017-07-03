@@ -11,6 +11,7 @@ module Tx : sig
   module ScriptPubKey : sig
     type typ =
       | Pubkeyhash
+      | Scripthash
 
     type t = {
       addresses : Base58.Bitcoin.t list ;
