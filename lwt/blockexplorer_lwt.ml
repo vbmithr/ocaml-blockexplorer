@@ -96,15 +96,60 @@ let broadcast_tx ?(testnet=false) rawtx_bytes =
   let encoding = Json_encoding.(obj1 (req "txid" string)) in
   safe_post ~params ~encoding url >>| R.map (fun txid -> `Hex txid)
 
-let tx_by_addr ?(testnet=false) addr =
+type tx_by_addr_result = {
+  page_id : int ;
+  nb_pages : int ;
+  txs : Tx.t list ;
+}
+
+let tx_by_addr_encoding page_id =
+  let open Json_encoding in
+  conv
+    (fun { page_id ; nb_pages ; txs } -> (nb_pages, txs))
+    (fun (nb_pages, txs) -> { page_id ; nb_pages ; txs })
+    (obj2
+       (req "pagesTotal" int)
+       (req "txs" (list Tx.encoding)))
+
+let tx_by_addr ?(testnet=false) ?(page=0) addr =
   let url = if testnet then testnet_base_url else base_url in
   let url = Uri.with_path url "/api/txs" in
-  let url = Uri.with_query url ["address", [ Base58.Bitcoin.to_string addr]] in
-  let encoding =
-    let open Json_encoding in
-    conv (fun s -> (0, s)) (fun (_, s) -> s)
-      (obj2 (req "pagesTotal" int) (req "txs" (list Tx.encoding))) in
-  safe_get ~encoding url
+  let url = Uri.with_query url [
+      "address", [ Base58.Bitcoin.to_string addr ] ;
+      "pageNum", [ Int.to_string page ] ;
+    ] in
+  safe_get ~encoding:(tx_by_addr_encoding page) url
+
+let all_tx_by_addr ?(testnet=false) addr =
+  let rec loop acc id =
+    tx_by_addr ~testnet ~page:id addr >>= function
+    | Error _ as e -> Lwt.return e
+    | Ok { page_id; nb_pages; txs } ->
+      if page_id < nb_pages - 1 then
+        loop (txs @ acc) (id + 1)
+      else Lwt.return_ok (txs @ acc)
+  in
+  loop [] 0
+
+type tx_by_addrs_result = {
+  nb_txs : int ;
+  from_id : int ;
+  to_id : int ;
+  txs : Tx.t list ;
+}
+
+let tx_by_addrs_result_encoding =
+  let open Json_encoding in
+  conv
+    (fun { nb_txs ; from_id ; to_id ; txs } ->
+       (nb_txs, from_id, to_id, txs))
+    (fun (nb_txs, from_id, to_id, txs) ->
+       { nb_txs ; from_id ; to_id ; txs })
+    (obj4
+       (req "totalItems" int)
+       (req "from" int)
+       (req "to" int)
+       (req "items" (list Tx.encoding)))
 
 let tx_by_addrs ?(testnet=false) ?start ?stop addrs =
   let url = if testnet then testnet_base_url else base_url in
@@ -114,15 +159,19 @@ let tx_by_addrs ?(testnet=false) ?start ?stop addrs =
       Option.map start ~f:(fun i -> "from", [Int.to_string i]) ;
       Option.map stop ~f:(fun i -> "to", [Int.to_string i]) ;
     ] in
-  let encoding =
-    let open Json_encoding in
-    conv (fun s -> (0, 0, 0, s)) (fun (_, _, _, s) -> s)
-      (obj4
-         (req "totalItems" int)
-         (req "from" int)
-         (req "to" int)
-         (req "items" (list Tx.encoding))) in
-  safe_post ~params ~encoding url
+  safe_post ~params ~encoding:tx_by_addrs_result_encoding url
+
+let all_tx_by_addrs ?(testnet=false) ?(pagesize=50) addrs =
+  if pagesize <= 0 || pagesize > 50 then
+    invalid_arg "all_tx_by_addrs: pagesize must be between 1 and 50" ;
+  let rec loop acc start =
+    let stop = start + pagesize in
+    tx_by_addrs ~testnet ~start ~stop addrs >>= function
+    | Error _ as e -> Lwt.return e
+    | Ok { nb_txs; from_id; to_id; txs } ->
+      if to_id = nb_txs then Lwt.return_ok (txs @ acc)
+      else loop (txs @ acc) to_id
+  in loop [] 0
 
 let network_status ?(testnet=false) () =
   let url = if testnet then testnet_base_url else base_url in

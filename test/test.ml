@@ -16,14 +16,28 @@ let print_unknown ppf _ = Format.fprintf ppf "unknown error"
 let main () =
   let addr = Base58.Bitcoin.of_string_exn "mtaGjUwusMAyx451M26KAJq6a8BiEJyMUd" in
   let addr2 = Base58.Bitcoin.of_string_exn "2NF2baYuJAkCKo5onjUKEPdARQkZ6SYyKd5" in
+  let addr_mult = Base58.Bitcoin.of_string_exn "mjVrE2kfz42sLR5gFcfvG6PwbAjhpmsKnn" in
   begin
     tx_by_addr ~testnet:true addr >>= function
     | Ok _ -> Lwt.return_unit
     | Error err -> Lwt_log.error (Http.string_of_error err)
   end >>= fun () ->
   begin
+    all_tx_by_addr ~testnet:true addr_mult >>= function
+    | Ok _ -> Lwt.return_unit
+    | Error err -> Lwt_log.error (Http.string_of_error err)
+  end >>= fun () ->
+  begin
     tx_by_addrs ~testnet:true [ addr ; addr2 ] >>= function
     | Ok _ -> Lwt.return_unit
+    | Error err -> Lwt_log.error (Http.string_of_error err)
+  end >>= fun () ->
+  begin
+    all_tx_by_addrs ~testnet:true [ addr_mult ] >>= function
+    | Ok txs ->
+      (* Caml.Format.printf "Length = %d@." (List.length txs) ; *)
+      assert (List.length txs = 31) ;
+      Lwt.return_unit
     | Error err -> Lwt_log.error (Http.string_of_error err)
   end >>= fun () ->
   begin network_status () >>= function
