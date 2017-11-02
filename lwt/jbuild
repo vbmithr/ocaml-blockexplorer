@@ -1,12 +1,13 @@
 (library
  ((name        blockexplorer_lwt)
-  (public_name blockexplorer.lwt)
+  (public_name blockexplorer-lwt)
   (modules (blockexplorer_lwt))
   (optional)
-  (libraries (rresult hex ocplib-json-typed ezjsonm blockexplorer cohttp.lwt))))
+  (libraries (rresult hex ocplib-json-typed ezjsonm blockexplorer cohttp-lwt-unix))))
 
 (executable
  ((name bx)
   (public_name bx)
   (modules (bx))
-  (libraries (cmdliner lwt blockexplorer.lwt))))
+  (package blockexplorer-lwt)
+  (libraries (cmdliner lwt blockexplorer_lwt))))
