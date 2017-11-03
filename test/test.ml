@@ -18,22 +18,22 @@ let main () =
   let addr2 = Base58.Bitcoin.of_string_exn "2NF2baYuJAkCKo5onjUKEPdARQkZ6SYyKd5" in
   let addr_mult = Base58.Bitcoin.of_string_exn "mjVrE2kfz42sLR5gFcfvG6PwbAjhpmsKnn" in
   begin
-    tx_by_addr ~testnet:true addr >>= function
+    tx_by_addr ~network:BTC_testnet addr >>= function
     | Ok _ -> Lwt.return_unit
     | Error err -> Lwt_log.error (Http.string_of_error err)
   end >>= fun () ->
   begin
-    all_tx_by_addr ~testnet:true addr_mult >>= function
+    all_tx_by_addr ~network:BTC_testnet addr_mult >>= function
     | Ok _ -> Lwt.return_unit
     | Error err -> Lwt_log.error (Http.string_of_error err)
   end >>= fun () ->
   begin
-    tx_by_addrs ~testnet:true [ addr ; addr2 ] >>= function
+    tx_by_addrs ~network:BTC_testnet [ addr ; addr2 ] >>= function
     | Ok _ -> Lwt.return_unit
     | Error err -> Lwt_log.error (Http.string_of_error err)
   end >>= fun () ->
   begin
-    all_tx_by_addrs ~testnet:true [ addr_mult ] >>= function
+    all_tx_by_addrs ~network:BTC_testnet [ addr_mult ] >>= function
     | Ok txs ->
       (* Caml.Format.printf "Length = %d@." (List.length txs) ; *)
       assert (List.length txs = 31) ;
@@ -56,7 +56,7 @@ let main () =
   | Ok _ -> Lwt.return_unit
   | Error err -> Lwt_log.error (Http.string_of_error err)
   end >>= fun () ->
-  utxos ~testnet:true [addr] >|= function
+  utxos ~network:BTC_testnet [addr] >|= function
   | Ok res ->
       ListLabels.iter txs ~f:begin fun t ->
         let json = Ezjsonm.from_string t in

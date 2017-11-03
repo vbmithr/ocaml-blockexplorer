@@ -8,9 +8,15 @@ let loglevel =
   let doc = "Print more debug messages. Can be repeated." in
   Arg.(value & flag_all & info ["v"] ~doc)
 
-let testnet =
-  let doc = "Use Bitcoin testnet." in
-  Arg.(value & flag & info ["t" ; "testnet"] ~doc)
+let network_conv =
+  (fun str ->
+     try `Ok (network_of_string str) with _ ->
+       `Error (Printf.sprintf "Network expected, got %s" str)),
+  network_pp
+
+let network =
+  let doc = "Network to use." in
+  Arg.(value & opt network_conv BTC & info ["n" ; "network"] ~doc)
 
 let hex =
   (fun str ->
@@ -20,9 +26,9 @@ let hex =
      let `Hex hex_str = Hex.of_string hex in
      Format.fprintf ppf "%s" hex_str)
 
-let fetch_utxos loglevel testnet addrs =
+let fetch_utxos loglevel network addrs =
   Lwt_log.debug "Looking for UTXOs" >>= fun () ->
-  utxos ~testnet addrs >>= function
+  utxos ~network addrs >>= function
   | Error err ->
     Lwt_log.error (Http.string_of_error err) >|= fun () ->
     exit 1
@@ -32,8 +38,8 @@ let fetch_utxos loglevel testnet addrs =
     end ;
     Lwt.return_unit
 
-let fetch_utxos loglevel testnet addrs =
-  Lwt_main.run (fetch_utxos loglevel testnet addrs)
+let fetch_utxos loglevel network addrs =
+  Lwt_main.run (fetch_utxos loglevel network addrs)
 
 let fetch_utxos =
   let payment_addr =
@@ -45,19 +51,19 @@ let fetch_utxos =
   let addrs =
     Arg.(non_empty & (pos_all payment_addr []) & info [] ~docv:"ADDR") in
   let doc = "Fetch UTXOs." in
-  Term.(const fetch_utxos $ loglevel $ testnet $ addrs),
+  Term.(const fetch_utxos $ loglevel $ network $ addrs),
   Term.info "fetch-utxos" ~doc
 
-let fetch_rawblock loglevel testnet blockhash dest =
-  begin rawblock ~testnet (Hex.of_string blockhash) >>= function
+let fetch_rawblock loglevel network blockhash dest =
+  begin rawblock ~network (Hex.of_string blockhash) >>= function
     | Error err -> Lwt_log.error (Http.string_of_error err)
     | Ok rawblock ->
       let open Lwt_io in
       with_file ~mode:Output dest (fun oc -> write oc rawblock)
   end
 
-let fetch_rawblock loglevel testnet blockhash dest =
-  Lwt_main.run (fetch_rawblock loglevel testnet blockhash dest)
+let fetch_rawblock loglevel network blockhash dest =
+  Lwt_main.run (fetch_rawblock loglevel network blockhash dest)
 
 let fetch_rawblock =
   let blockhash =
@@ -65,25 +71,25 @@ let fetch_rawblock =
   let dest =
     Arg.(required & (pos 1 (some string) None) & info [] ~docv:"FILE") in
   let doc = "Fetch raw block." in
-  Term.(const fetch_rawblock $ loglevel $ testnet $ blockhash $ dest),
+  Term.(const fetch_rawblock $ loglevel $ network $ blockhash $ dest),
   Term.info "fetch-rawblock" ~doc
 
-let fetch_block loglevel testnet blockhash =
-  begin block ~testnet (Hex.of_string blockhash) >>= function
+let fetch_block loglevel network blockhash =
+  begin block ~network (Hex.of_string blockhash) >>= function
     | Error err -> Lwt_log.error (Http.string_of_error err)
     | Ok block ->
       Format.printf "%a@." Block.pp block ;
       Lwt.return_unit
   end
 
-let fetch_block loglevel testnet blockhash =
-  Lwt_main.run (fetch_block loglevel testnet blockhash)
+let fetch_block loglevel network blockhash =
+  Lwt_main.run (fetch_block loglevel network blockhash)
 
 let fetch_block =
   let blockhash =
     Arg.(required & (pos 0 (some hex) None) & info [] ~docv:"BLOCK_HASH") in
   let doc = "Fetch block." in
-  Term.(const fetch_block $ loglevel $ testnet $ blockhash),
+  Term.(const fetch_block $ loglevel $ network $ blockhash),
   Term.info "fetch-block" ~doc
 
 let default_cmd =
