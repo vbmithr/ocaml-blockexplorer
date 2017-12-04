@@ -2,8 +2,8 @@ open Base
 
 open Rresult
 open Lwt.Infix
+open Cohttp_lwt
 open Cohttp_lwt_unix
-module Body = Cohttp_lwt_body
 
 open Blockexplorer
 open Blockexplorer.Types
