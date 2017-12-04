@@ -3,7 +3,7 @@
   (public_name blockexplorer.async)
   (modules (blockexplorer_async))
   (optional)
-  (libraries (hex ocplib-json-typed ezjsonm blockexplorer cohttp.async))))
+  (libraries (hex ocplib-json-typed ezjsonm blockexplorer cohttp-async))))
 
 (executable
  ((name bx)
